@@ -5,6 +5,7 @@ A simple Android kiosk browser app that displays web content in full-screen mode
 A fork of the original version https://github.com/screenlite/android-web-kiosk
 
 ## Key Features
+- Added microphone access so this can be used with speech input
 - Displays any website in immersive full-screen mode
 - Automatically launches on device boot
 - Brings itself back to the foreground if minimized
