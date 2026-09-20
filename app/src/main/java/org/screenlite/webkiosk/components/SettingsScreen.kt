@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.first
@@ -51,10 +52,65 @@ fun SettingsScreen() {
         activeBrightness = kioskSettings.getActiveBrightness().first().toString()
     }
 
+    // Shared by the top-bar Save button and the bottom Save button.
+    val onSave: () -> Unit = save@{
+        var hasError = false
+
+        val checkIntervalValue = checkIntervalSeconds.toLongOrNull()
+        if (checkIntervalSeconds.isBlank()) { checkIntervalError = "Required"; hasError = true }
+        else if (checkIntervalValue == null || checkIntervalValue !in 1..99999) { checkIntervalError = "Invalid"; hasError = true }
+
+        val idleTimeoutValue = idleTimeout.toLongOrNull()
+        if (idleTimeoutValue == null || idleTimeoutValue < 0) { idleTimeoutError = "Must be ≥ 0"; hasError = true }
+
+        val idleBrightnessValue = idleBrightness.toIntOrNull()
+        if (idleBrightnessValue == null || idleBrightnessValue !in 0..100) { idleBrightnessError = "0–100"; hasError = true }
+
+        val activeBrightnessValue = activeBrightness.toIntOrNull()
+        if (activeBrightnessValue == null || activeBrightnessValue !in 0..100) { activeBrightnessError = "0–100"; hasError = true }
+
+        if (hasError) {
+            // Jump to the first tab that has an error so the user can actually see it.
+            selectedTabIndex = when {
+                checkIntervalError != null -> 0
+                idleTimeoutError != null -> 1
+                else -> 2
+            }
+            return@save
+        }
+
+        (context as? ComponentActivity)?.lifecycleScope?.launch {
+            kioskSettings.setCheckInterval(checkIntervalValue!! * 1000L)
+            kioskSettings.setStartUrl(kioskUrl)
+            kioskSettings.setRotation(rotation)
+            kioskSettings.setIdleTimeout(idleTimeoutValue!!)
+            kioskSettings.setIdleBrightness(idleBrightnessValue!!)
+            kioskSettings.setActiveBrightness(activeBrightnessValue!!)
+
+            StayOnTopService.restart(context)
+        }
+        (context as? ComponentActivity)?.finish()
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineLarge) },
+                title = {
+                    Text(
+                        stringResource(R.string.settings_title),
+                        style = MaterialTheme.typography.headlineLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
+                actions = {
+                    FocusableButton(
+                        text = stringResource(R.string.button_save),
+                        onClick = onSave,
+                        background = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.width(16.dp))
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
@@ -78,39 +134,41 @@ fun SettingsScreen() {
 
             Spacer(Modifier.height(16.dp))
 
-            when (selectedTabIndex) {
-                0 -> GeneralSettingsTab(
-                    kioskUrl = kioskUrl,
-                    onKioskUrlChange = { kioskUrl = it },
-                    checkIntervalSeconds = checkIntervalSeconds,
-                    onCheckIntervalChange = { checkIntervalSeconds = it },
-                    checkIntervalError = checkIntervalError,
-                    onCheckIntervalErrorChange = { checkIntervalError = it }
-                )
-                1 -> DisplaySettingsTab(
-                    rotation = rotation,
-                    onRotationChange = { rotation = it },
-                    idleTimeout = idleTimeout,
-                    onIdleTimeoutChange = { idleTimeout = it },
-                    idleTimeoutError = idleTimeoutError,
-                    onIdleTimeoutErrorChange = { idleTimeoutError = it }
-                )
-                2 -> BrightnessSettingsTab(
-                    idleBrightness = idleBrightness,
-                    activeBrightness = activeBrightness,
-                    onIdleBrightnessChange = { idleBrightness = it },
-                    onActiveBrightnessChange = { activeBrightness = it },
-                    idleBrightnessError = idleBrightnessError,
-                    activeBrightnessError = activeBrightnessError,
-                    onIdleBrightnessErrorChange = { idleBrightnessError = it },
-                    onActiveBrightnessErrorChange = { activeBrightnessError = it }
-                )
+            Box(modifier = Modifier.weight(1f)) {
+                when (selectedTabIndex) {
+                    0 -> GeneralSettingsTab(
+                        kioskUrl = kioskUrl,
+                        onKioskUrlChange = { kioskUrl = it },
+                        checkIntervalSeconds = checkIntervalSeconds,
+                        onCheckIntervalChange = { checkIntervalSeconds = it },
+                        checkIntervalError = checkIntervalError,
+                        onCheckIntervalErrorChange = { checkIntervalError = it }
+                    )
+                    1 -> DisplaySettingsTab(
+                        rotation = rotation,
+                        onRotationChange = { rotation = it },
+                        idleTimeout = idleTimeout,
+                        onIdleTimeoutChange = { idleTimeout = it },
+                        idleTimeoutError = idleTimeoutError,
+                        onIdleTimeoutErrorChange = { idleTimeoutError = it }
+                    )
+                    2 -> BrightnessSettingsTab(
+                        idleBrightness = idleBrightness,
+                        activeBrightness = activeBrightness,
+                        onIdleBrightnessChange = { idleBrightness = it },
+                        onActiveBrightnessChange = { activeBrightness = it },
+                        idleBrightnessError = idleBrightnessError,
+                        activeBrightnessError = activeBrightnessError,
+                        onIdleBrightnessErrorChange = { idleBrightnessError = it },
+                        onActiveBrightnessErrorChange = { activeBrightnessError = it }
+                    )
+                }
             }
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(16.dp))
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(end = 16.dp, bottom = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.End)
             ) {
                 FocusableButton(
@@ -121,36 +179,7 @@ fun SettingsScreen() {
 
                 FocusableButton(
                     text = stringResource(R.string.button_save),
-                    onClick = {
-                        var hasError = false
-
-                        val checkIntervalValue = checkIntervalSeconds.toLongOrNull()
-                        if (checkIntervalSeconds.isBlank()) { checkIntervalError = "Required"; hasError = true }
-                        else if (checkIntervalValue == null || checkIntervalValue !in 1..99999) { checkIntervalError = "Invalid"; hasError = true }
-
-                        val idleTimeoutValue = idleTimeout.toLongOrNull()
-                        if (idleTimeoutValue == null || idleTimeoutValue < 0) { idleTimeoutError = "Must be ≥ 0"; hasError = true }
-
-                        val idleBrightnessValue = idleBrightness.toIntOrNull()
-                        if (idleBrightnessValue == null || idleBrightnessValue !in 0..100) { idleBrightnessError = "0–100"; hasError = true }
-
-                        val activeBrightnessValue = activeBrightness.toIntOrNull()
-                        if (activeBrightnessValue == null || activeBrightnessValue !in 0..100) { activeBrightnessError = "0–100"; hasError = true }
-
-                        if (hasError) return@FocusableButton
-
-                        (context as? ComponentActivity)?.lifecycleScope?.launch {
-                            kioskSettings.setCheckInterval(checkIntervalValue!! * 1000L)
-                            kioskSettings.setStartUrl(kioskUrl)
-                            kioskSettings.setRotation(rotation)
-                            kioskSettings.setIdleTimeout(idleTimeoutValue!!)
-                            kioskSettings.setIdleBrightness(idleBrightnessValue!!)
-                            kioskSettings.setActiveBrightness(activeBrightnessValue!!)
-
-                            StayOnTopService.restart(context)
-                        }
-                        (context as? ComponentActivity)?.finish()
-                    },
+                    onClick = onSave,
                     background = MaterialTheme.colorScheme.primary
                 )
             }
