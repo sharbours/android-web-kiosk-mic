@@ -6,7 +6,7 @@ A fork of the original version https://github.com/screenlite/android-web-kiosk
 
 ## Key Features
 - Added microphone access so this can be used with speech input
-- Made the save button visible in the configuration screens for small screen devices
+- Made the save button visible in the configuration screens for small screen devices -This is a pet peeve of mine, if you have older eyes you need a (insert favorite expletive here) microscope to view the screen when set to smaller fonts, let alone be able to use the on screen keyboard.
 - Displays any website in immersive full-screen mode
 - Automatically launches on device boot
 - Brings itself back to the foreground if minimized
