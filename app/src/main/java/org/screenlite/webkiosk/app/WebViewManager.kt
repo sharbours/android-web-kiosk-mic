@@ -3,6 +3,7 @@ package org.screenlite.webkiosk.app
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Build
 import android.util.DisplayMetrics
 import android.util.Log
@@ -10,6 +11,7 @@ import android.view.View
 import android.webkit.*
 import android.webkit.WebView.setWebContentsDebuggingEnabled
 import androidx.annotation.RequiresApi
+import org.screenlite.webkiosk.MainActivity
 import org.screenlite.webkiosk.components.RotatedWebView
 import org.screenlite.webkiosk.data.Rotation
 
@@ -64,6 +66,15 @@ class WebViewManager(
             minimumLogicalFontSize = 1
             useWideViewPort = true
         }
+    }
+
+    /**
+     * Only the page currently shown in the kiosk (same host) may use the microphone.
+     * This stops embedded third-party iframes from silently getting access.
+     */
+    private fun isTrustedOrigin(origin: Uri): Boolean {
+        val pageHost = currentWebView?.url?.let { Uri.parse(it).host } ?: return false
+        return origin.host.equals(pageHost, ignoreCase = true)
     }
 
     private fun calculateScale(displayMetrics: DisplayMetrics): Int {
@@ -155,6 +166,32 @@ class WebViewManager(
                 transport?.webView = tempWebView
                 resultMsg?.sendToTarget()
                 return true
+            }
+
+            override fun onPermissionRequest(request: PermissionRequest) {
+                val wantsAudio = request.resources.contains(PermissionRequest.RESOURCE_AUDIO_CAPTURE)
+                if (!wantsAudio || !isTrustedOrigin(request.origin)) {
+                    Log.w("WebViewManager", "Denying web permission request: ${request.resources.joinToString()} from ${request.origin}")
+                    request.deny()
+                    return
+                }
+
+                val grantAudio = {
+                    request.grant(arrayOf(PermissionRequest.RESOURCE_AUDIO_CAPTURE))
+                }
+
+                if (MicrophonePermissionHelper.hasPermission(context)) {
+                    grantAudio()
+                } else {
+                    val activity = context as? MainActivity
+                    if (activity == null) {
+                        request.deny()
+                    } else {
+                        activity.requestMicrophonePermission { granted ->
+                            if (granted) grantAudio() else request.deny()
+                        }
+                    }
+                }
             }
 
             override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {

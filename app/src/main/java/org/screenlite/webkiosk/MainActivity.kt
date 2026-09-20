@@ -45,6 +45,26 @@ class MainActivity : ComponentActivity() {
     private lateinit var unlockHandler: TapUnlockHandler
     lateinit var idleController: IdleBrightnessController
 
+    private var microphoneCallback: ((Boolean) -> Unit)? = null
+    private val microphonePermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        Log.d("MainActivity", "Microphone permission granted: $isGranted")
+        microphoneCallback?.invoke(isGranted)
+        microphoneCallback = null
+    }
+
+    /**
+     * Asks the user for the RECORD_AUDIO runtime permission and reports the result.
+     * Used by WebViewManager when a web page calls getUserMedia({ audio: true }).
+     */
+    fun requestMicrophonePermission(onResult: (Boolean) -> Unit) {
+        // Deny any request that is still waiting so its WebView callback is not leaked.
+        microphoneCallback?.invoke(false)
+        microphoneCallback = onResult
+        microphonePermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
