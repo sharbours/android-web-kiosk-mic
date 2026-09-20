@@ -1,13 +1,11 @@
-# Screenlite Web Kiosk
+# Screenlite Web Kiosk with Microphone Access added
 
 A simple Android kiosk browser app that displays web content in full-screen mode.
 
-[<img src="./docs/media/get_apk.png" height="80" alt="Get APK">](https://github.com/screenlite/web-kiosk/releases/download/v0.0.11/screenlite-web-kiosk-v0-0-11.apk)
-[<img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" height="80" alt="Get it at IzzyOnDroid">](https://apt.izzysoft.de/packages/org.screenlite.webkiosk)
-
-![preview](./docs/media/image.png)
+A fork of the original version https://github.com/screenlite/android-web-kiosk
 
 ## Key Features
+- Added microphone access so this can be used with speech input
 - Displays any website in immersive full-screen mode
 - Automatically launches on device boot
 - Brings itself back to the foreground if minimized
